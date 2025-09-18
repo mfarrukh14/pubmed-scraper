@@ -20,7 +20,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from PIL import Image, ImageTk
 import socket
+import threading
+import time
 
 # ---------- Configuration ----------
 GENOTYPE_KEYWORDS = ['MassARRAY','massarray','MassARRAY genotyping','whole exome sequencing','WES','PCR','TaqMan','microarray','sequencing','Sanger','genotyping']
@@ -438,6 +441,78 @@ DEFAULT_COLS = [
     'Quality Score (NOS)','Comments/Remarks'
 ]
 
+class SplashScreen:
+    def __init__(self, root):
+        self.root = root
+        self.splash = tk.Toplevel()
+        self.splash.title("")
+        self.splash.geometry("600x400")
+        self.splash.configure(bg='#2c3e50')
+        self.splash.resizable(False, False)
+        
+        # Center the splash screen
+        self.splash.update_idletasks()
+        width = self.splash.winfo_width()
+        height = self.splash.winfo_height()
+        x = (self.splash.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.splash.winfo_screenheight() // 2) - (height // 2)
+        self.splash.geometry(f'{width}x{height}+{x}+{y}')
+        
+        # Remove window decorations
+        self.splash.overrideredirect(True)
+        
+        # Create main frame
+        main_frame = tk.Frame(self.splash, bg='#2c3e50', pady=50)
+        main_frame.pack(expand=True, fill='both')
+        
+        # Add image placeholder (you can replace this with actual image)
+        try:
+            # Try to load an image if it exists
+            if os.path.exists("ali_image.PNG") or os.path.exists("ali_image.PNG"):
+                img_path = "ali_image.PNG" if os.path.exists("ali_image.PNG") else "ali_image.PNG"
+                img = Image.open(img_path)
+                img = img.resize((200, 200), Image.Resampling.LANCZOS)
+                self.photo = ImageTk.PhotoImage(img)
+                img_label = tk.Label(main_frame, image=self.photo, bg='#2c3e50')
+                img_label.pack(pady=20)
+            else:
+                # Placeholder if no image found
+                placeholder = tk.Label(main_frame, text="🎖️", font=('Arial', 60), 
+                                     bg='#2c3e50', fg='#f39c12')
+                placeholder.pack(pady=20)
+        except Exception:
+            # Fallback placeholder
+            placeholder = tk.Label(main_frame, text="🎖️", font=('Arial', 60), 
+                                 bg='#2c3e50', fg='#f39c12')
+            placeholder.pack(pady=20)
+        
+        # Memorial message in italics
+        memorial_text = tk.Label(main_frame, 
+                                text="In loving memory of\nMaj. General Ali Nigga", 
+                                font=('Times New Roman', 24, 'italic'),
+                                bg='#2c3e50', 
+                                fg='#ecf0f1',
+                                justify='center')
+        memorial_text.pack(pady=30)
+        
+        # Loading text
+        loading_text = tk.Label(main_frame, 
+                              text="Loading Application...", 
+                              font=('Arial', 12),
+                              bg='#2c3e50', 
+                              fg='#bdc3c7')
+        loading_text.pack(pady=20)
+        
+        # Show splash screen
+        self.splash.lift()
+        self.splash.focus_force()
+        
+        # Close splash screen after 5 seconds
+        self.root.after(5000, self.close_splash)
+    
+    def close_splash(self):
+        self.splash.destroy()
+
 class App:
     def __init__(self, root):
         self.root = root
@@ -545,7 +620,17 @@ class App:
 
 def main():
     root = tk.Tk()
-    app = App(root)
+    root.withdraw()  # Hide main window initially
+    
+    # Show splash screen
+    splash = SplashScreen(root)
+    
+    # Wait for splash screen to finish (5 seconds)
+    def show_main_app():
+        root.deiconify()  # Show main window
+        app = App(root)
+    
+    root.after(5000, show_main_app)
     root.mainloop()
 
 if __name__ == '__main__':
