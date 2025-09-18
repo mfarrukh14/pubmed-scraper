@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import socket
 
 # ---------- Configuration ----------
 GENOTYPE_KEYWORDS = ['MassARRAY','massarray','MassARRAY genotyping','whole exome sequencing','WES','PCR','TaqMan','microarray','sequencing','Sanger','genotyping']
@@ -31,6 +32,56 @@ STUDY_DESIGN_KEYWORDS = {
     'Meta-analysis': ['meta-analysis','meta analysis','systematic review']
 }
 REGION_KEYWORDS = ['Pakistan','Pashtun','KPK','Khyber','Sindh','Punjab','Balochistan','India','China','USA','United States']
+README_STATUS_URL = "https://raw.githubusercontent.com/mfarrukh14/pubmed-scraper/main/README.md"
+
+# ---------- Permission and Connection Checks ----------
+def check_internet_connection():
+    """Check if internet connection is available"""
+    try:
+        # Try to connect to Google's DNS server
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        return True
+    except OSError:
+        return False
+
+def check_application_status():
+    """Check if the application is enabled by reading the GitHub README status"""
+    try:
+        if not check_internet_connection():
+            return False, "internet"
+        
+        headers = {'User-Agent': 'Mozilla/5.0 (ArticleExtractor/1.0)'}
+        response = requests.get(README_STATUS_URL, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        content = response.text.strip()
+        # Look for Status: ON or Status: OFF (case insensitive)
+        if re.search(r'Status:\s*ON', content, re.IGNORECASE):
+            return True, "enabled"
+        elif re.search(r'Status:\s*OFF', content, re.IGNORECASE):
+            return False, "disabled"
+        else:
+            # If status format is not found, assume disabled for security
+            return False, "disabled"
+    except Exception:
+        # If README is unreachable, deny access
+        return False, "unreachable"
+
+def show_permission_dialog(parent, status_type):
+    """Show appropriate permission/error dialog based on status type"""
+    if status_type == "internet":
+        messagebox.showerror(
+            "No Internet Connection", 
+            "Please connect to internet to use application",
+            parent=parent
+        )
+    elif status_type in ["disabled", "unreachable"]:
+        messagebox.showerror(
+            "Permission Required", 
+            "Please obtain permissions from Farrukh to use this application.",
+            parent=parent
+        )
+    return False
 
 # ---------- Helpers ----------
 def fetch_html(url, timeout=15):
@@ -391,6 +442,11 @@ class App:
     def __init__(self, root):
         self.root = root
         root.title("Article -> Excel Extractor (Gene numbering)")
+        
+        # Check permissions first
+        self.app_enabled = False
+        self.check_permissions_on_startup()
+        
         frm = ttk.Frame(root, padding=12)
         frm.grid(sticky='nsew')
         ttk.Label(frm, text="Article URL:").grid(column=0, row=0, sticky='w')
@@ -406,14 +462,52 @@ class App:
         self.status = ttk.Label(frm, text="", foreground='green')
         self.status.grid(column=0, row=4, columnspan=4, sticky='w')
         self.excel_path = None
+        
+        # Disable interface if not permitted
+        if not self.app_enabled:
+            self.disable_interface()
+
+    def check_permissions_on_startup(self):
+        """Check permissions when the application starts"""
+        self.status_checking = ttk.Label(self.root, text="Checking permissions...", foreground='orange')
+        self.status_checking.pack(pady=20)
+        self.root.update_idletasks()
+        
+        is_enabled, status_type = check_application_status()
+        self.status_checking.destroy()
+        
+        if not is_enabled:
+            show_permission_dialog(self.root, status_type)
+            self.app_enabled = False
+        else:
+            self.app_enabled = True
+
+    def disable_interface(self):
+        """Disable all interactive elements if permissions not granted"""
+        # This method will be called after interface creation if needed
+        pass
 
     def choose_file(self):
+        if not self.app_enabled:
+            show_permission_dialog(self.root, "disabled")
+            return
+            
         f = filedialog.asksaveasfilename(defaultextension='.xlsx', filetypes=[('Excel files','*.xlsx')], title='Choose or create Excel file to append to')
         if f:
             self.excel_path = f
             self.file_label.config(text=self.excel_path)
 
     def on_extract(self):
+        if not self.app_enabled:
+            show_permission_dialog(self.root, "disabled")
+            return
+            
+        # Double-check permissions before extraction
+        is_enabled, status_type = check_application_status()
+        if not is_enabled:
+            show_permission_dialog(self.root, status_type)
+            return
+        
         url = self.url_var.get().strip()
         if not url:
             messagebox.showerror("Error", "Paste article URL first.")
