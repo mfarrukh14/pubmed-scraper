@@ -32,7 +32,7 @@ STUDY_DESIGN_KEYWORDS = {
     'Meta-analysis': ['meta-analysis','meta analysis','systematic review']
 }
 REGION_KEYWORDS = ['Pakistan','Pashtun','KPK','Khyber','Sindh','Punjab','Balochistan','India','China','USA','United States']
-README_STATUS_URL = "https://raw.githubusercontent.com/mfarrukh14/pubmed-scraper/refs/heads/main/README.md"
+README_STATUS_URL = "https://github.com/mfarrukh14/pubmed-scraper/blob/main/README.md"
 
 # ---------- Permission and Connection Checks ----------
 def check_internet_connection():
