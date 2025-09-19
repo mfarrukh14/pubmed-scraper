@@ -94,7 +94,14 @@ def fetch_html(url, timeout=15):
     return r.text
 
 def soup_from_html(html_text):
-    return BeautifulSoup(html_text, 'lxml')
+    # Prefer lxml for speed/robustness, but gracefully fall back if unavailable
+    for parser in ('lxml', 'html5lib', 'html.parser'):
+        try:
+            return BeautifulSoup(html_text, parser)
+        except Exception:
+            continue
+    # Final fallback (should not normally be reached)
+    return BeautifulSoup(html_text, 'html.parser')
 
 def get_meta(soup, key):
     tag = soup.find('meta', attrs={'name': key})
